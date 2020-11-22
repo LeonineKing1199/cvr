@@ -20,6 +20,15 @@ impl std::convert::From<::png::EncodingError> for Error {
     }
 }
 
+/// `read_rgb8` will attempt to parse PNG data from the user-supplied `reader`.
+///
+/// This function will return an `Error` if a valid 8-bit PNG cannot be decoded otherwise, a 3
+/// channel image with 8-bit color depth will be returned in an RGB channel ordering. RGBA PNGs are
+/// supported as the alpha channel is ignored.
+///
+/// Image data is read in one line at a time so space overhead is a small, constant factor when
+/// decoding.
+///
 pub fn read_rgb8<Reader: std::io::Read>(reader: Reader) -> Result<crate::RgbImg, Error> {
     let mut decoder = ::png::Decoder::new(reader);
 
@@ -94,6 +103,9 @@ pub fn read_rgb8<Reader: std::io::Read>(reader: Reader) -> Result<crate::RgbImg,
     Ok(rgb_img)
 }
 
+/// `write_rgb8` temporarily borrows an `RgbImg` and writes out the encoded PNG data to the
+/// user-supplied `writer`.
+///
 pub fn write_rgb8<Writer: std::io::Write>(
     img: &crate::RgbImg,
     writer: Writer,
