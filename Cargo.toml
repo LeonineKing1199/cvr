@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 png = "0.16.7"
-minivec = "0.1.1"
+minivec = "0.1.2"
 
 [build-dependencies]
