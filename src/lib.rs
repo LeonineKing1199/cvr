@@ -60,24 +60,16 @@ impl RgbImg {
     }
 
     pub fn to_packed_buf(&self) -> Vec<u8> {
-        let r = self.r();
-        let g = self.g();
-        let b = self.b();
+        let (r, g, b) = (self.r(), self.g(), self.b());
+        let len = self.total() as usize * 3;
+        let mut vec = vec![std::mem::MaybeUninit::<u8>::uninit(); len];
 
-        let mut vec = vec![std::mem::MaybeUninit::<u8>::uninit(); self.total() as usize * 3];
-
-        let ptr = vec.as_mut_ptr();
-
-        unsafe {
-            for idx in 0..self.total() {
-                ptr.add(idx as usize * 3 as usize + 0)
-                    .write(std::mem::MaybeUninit::<u8>::new(r[idx as usize]));
-
-                ptr.add(idx as usize * 3 as usize + 1)
-                    .write(std::mem::MaybeUninit::<u8>::new(g[idx as usize]));
-
-                ptr.add(idx as usize * 3 as usize + 2)
-                    .write(std::mem::MaybeUninit::<u8>::new(b[idx as usize]));
+        for idx in 0..self.total() as usize {
+            unsafe {
+                let base_offset = idx as usize * 3;
+                vec[base_offset + 0].as_mut_ptr().write(r[idx]);
+                vec[base_offset + 1].as_mut_ptr().write(g[idx]);
+                vec[base_offset + 2].as_mut_ptr().write(b[idx]);
             }
         }
 
