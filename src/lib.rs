@@ -45,17 +45,19 @@ impl RgbImg {
         let mut g = minivec::MiniVec::<u8>::with_capacity(total);
         let mut b = minivec::MiniVec::<u8>::with_capacity(total);
 
-        let r_ptr = r.as_mut_ptr();
-        let g_ptr = g.as_mut_ptr();
-        let b_ptr = b.as_mut_ptr();
+        let (r_buf, g_buf, b_buf) = (
+            r.spare_capacity_mut(),
+            g.spare_capacity_mut(),
+            b.spare_capacity_mut(),
+        );
 
         buf.chunks_exact(3)
             .enumerate()
             .for_each(|(idx, pixel)| -> () {
                 unsafe {
-                    r_ptr.add(idx).write(pixel[0]);
-                    g_ptr.add(idx).write(pixel[1]);
-                    b_ptr.add(idx).write(pixel[2]);
+                    r_buf[idx].as_mut_ptr().write(pixel[0]);
+                    g_buf[idx].as_mut_ptr().write(pixel[1]);
+                    b_buf[idx].as_mut_ptr().write(pixel[2]);
                 }
             });
 
