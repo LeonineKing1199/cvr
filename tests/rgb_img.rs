@@ -15,3 +15,16 @@ fn rgb_img_from_packed_buf() {
     assert_eq!(rgb_img.height(), height);
     assert_eq!(rgb_img.width(), width);
 }
+
+#[test]
+fn rgb_img_to_packed_buf() {
+    let buf = [1u8, 2, 3, 4, 5, 6, 7, 8, 9];
+    let height = 1;
+    let width = 3;
+
+    let rgb_img = cvr::RgbImg::from_packed_buf(&buf, height, width);
+
+    let packed = rgb_img.to_packed_buf();
+
+    assert_eq!(packed, [1u8, 2, 3, 4, 5, 6, 7, 8, 9]);
+}

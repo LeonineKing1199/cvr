@@ -89,15 +89,15 @@ impl RgbImg {
         let mut vec = vec![std::mem::MaybeUninit::<u8>::uninit(); len];
 
         for idx in 0..self.total() as usize {
-            unsafe {
-                let base_offset = idx as usize * 3;
-                vec[base_offset + 0].as_mut_ptr().write(r[idx]);
-                vec[base_offset + 1].as_mut_ptr().write(g[idx]);
-                vec[base_offset + 2].as_mut_ptr().write(b[idx]);
-            }
+            let base_offset = idx as usize * 3;
+
+            vec[base_offset + 0] = std::mem::MaybeUninit::new(r[idx]);
+            vec[base_offset + 1] = std::mem::MaybeUninit::new(g[idx]);
+            vec[base_offset + 2] = std::mem::MaybeUninit::new(b[idx]);
         }
 
-        unsafe { std::mem::transmute::<_, Vec<u8>>(vec) }
+        let mut vec = core::mem::ManuallyDrop::new(vec);
+        unsafe { Vec::from_raw_parts(vec.as_mut_ptr() as *mut u8, vec.len(), vec.capacity()) }
     }
 
     /// `r` will return a read-only slice pointing to the image data's red channel.
