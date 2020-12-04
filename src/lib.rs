@@ -10,8 +10,8 @@ pub struct RgbImg {
     r: minivec::MiniVec<u8>,
     g: minivec::MiniVec<u8>,
     b: minivec::MiniVec<u8>,
-    height: u32,
-    width: u32,
+    height: usize,
+    width: usize,
 }
 
 impl RgbImg {
@@ -38,8 +38,8 @@ impl RgbImg {
     /// Note: this function _copies_ the supplied buf so its time and space complexity are both
     /// `O(buf.len())`.
     ///
-    pub fn from_packed_buf(buf: &[u8], height: u32, width: u32) -> RgbImg {
-        let total = height as usize * width as usize;
+    pub fn from_packed_buf(buf: &[u8], height: usize, width: usize) -> RgbImg {
+        let total = height * width;
 
         let mut r = minivec::MiniVec::<u8>::with_capacity(total);
         let mut g = minivec::MiniVec::<u8>::with_capacity(total);
@@ -119,20 +119,20 @@ impl RgbImg {
 
     /// `height` returns the number of rows contained in the image data.
     ///
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> usize {
         self.height
     }
 
     /// `width` returns the number of columns contained in the image data.
     ///
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> usize {
         self.width
     }
 
     /// `total` is named after its OpenCV counterpart and returns the number of pixels contained
     /// in the image data.
     ///
-    pub fn total(&self) -> u32 {
+    pub fn total(&self) -> usize {
         self.height() * self.width()
     }
 }

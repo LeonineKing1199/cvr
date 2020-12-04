@@ -96,8 +96,8 @@ pub fn read_rgb8<Reader: std::io::Read>(reader: Reader) -> Result<crate::RgbImg,
         r,
         g,
         b,
-        height: height as u32,
-        width: width as u32,
+        height,
+        width,
     };
 
     Ok(rgb_img)
@@ -112,7 +112,7 @@ pub fn write_rgb8<Writer: std::io::Write>(
 ) -> Result<(), Error> {
     let height = img.height();
     let width = img.width();
-    let mut png_encoder = png::Encoder::new(writer, width, height);
+    let mut png_encoder = png::Encoder::new(writer, width as u32, height as u32);
     png_encoder.set_color(::png::ColorType::RGB);
     png_encoder.set_depth(::png::BitDepth::Eight);
 
