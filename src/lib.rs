@@ -135,4 +135,29 @@ impl RgbImg {
     pub fn total(&self) -> usize {
         self.height() * self.width()
     }
+
+    pub fn iter(&self) -> RgbIter {
+        RgbIter {
+            r_: self.r().iter(),
+            g_: self.g().iter(),
+            b_: self.b().iter(),
+        }
+    }
+}
+
+pub struct RgbIter<'a> {
+    r_: std::slice::Iter<'a, u8>,
+    g_: std::slice::Iter<'a, u8>,
+    b_: std::slice::Iter<'a, u8>,
+}
+
+impl<'a> std::iter::Iterator for RgbIter<'a> {
+    type Item = (u8, u8, u8);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.r_.next(), self.g_.next(), self.b_.next()) {
+            (Some(r), Some(g), Some(b)) => Some((*r, *g, *b)),
+            _ => None,
+        }
+    }
 }

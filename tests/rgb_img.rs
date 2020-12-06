@@ -29,4 +29,18 @@ fn rgb_img_packed() {
 
     let packed = rgb_img.to_packed_buf();
     assert_eq!(packed, buf);
+
+    let img_iter = rgb_img.iter();
+    let pixels = <Vec<_> as std::iter::FromIterator<(u8, u8, u8)>>::from_iter(img_iter);
+
+    assert_eq!(pixels.len(), height * width);
+
+    for (idx, (r, g, b)) in std::iter::successors(Some((1u8, 2u8, 3u8)), |(x, y, z)| {
+        Some((*x + 3, *y + 3, *z + 3))
+    })
+    .take(height * width)
+    .enumerate()
+    {
+        assert_eq!(pixels[idx], (r, g, b));
+    }
 }
