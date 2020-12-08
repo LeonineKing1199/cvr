@@ -169,3 +169,57 @@ impl<'a> std::iter::Iterator for RgbIter<'a> {
         self.r_.size_hint()
     }
 }
+
+pub struct GreyscaleIter<Iter>
+where
+    Iter: std::iter::Iterator<Item = (u8, u8, u8)>,
+{
+    iter_: Iter,
+}
+
+impl<Iter> GreyscaleIter<Iter>
+where
+    Iter: std::iter::Iterator<Item = (u8, u8, u8)>,
+{
+    fn new(iter: Iter) -> Self {
+        Self { iter_: iter }
+    }
+}
+
+impl<Iter> std::iter::Iterator for GreyscaleIter<Iter>
+where
+    Iter: std::iter::Iterator<Item = (u8, u8, u8)>,
+{
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter_.next().map(|(r, g, b)| -> u8 {
+            let r = (r as f64) / 255.0;
+            let g = (g as f64) / 255.0;
+            let b = (b as f64) / 255.0;
+
+            let grey = 0.21263901 * r + 0.71516868 * g + 0.07219232 * b;
+
+            if grey >= 1.0 {
+                255
+            } else {
+                (255.0 * grey) as u8
+            }
+        })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter_.size_hint()
+    }
+}
+
+pub trait Greyscale: std::iter::Iterator<Item = (u8, u8, u8)>
+where
+    Self: Sized,
+{
+    fn greyscale(self) -> GreyscaleIter<Self> {
+        GreyscaleIter::new(self)
+    }
+}
+
+impl<Iter> Greyscale for Iter where Iter: std::iter::Iterator<Item = (u8, u8, u8)> {}

@@ -1,5 +1,7 @@
 extern crate cvr;
 
+use cvr::Greyscale;
+
 #[test]
 fn rgb_img_packed() {
     let height = 3;
@@ -43,4 +45,7 @@ fn rgb_img_packed() {
     {
         assert_eq!(pixels[idx], (r, g, b));
     }
+
+    let grey: Vec<_> = rgb_img.iter().greyscale().collect();
+    assert_eq!(grey, [1, 4, 7, 10, 13, 16, 19, 22, 25]);
 }
