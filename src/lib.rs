@@ -4,7 +4,8 @@ extern crate minivec;
 
 pub mod png;
 
-/// `RgbImg` represents an 8-bit RGB image.
+/// `RgbImg` represents an 8-bit RGB image. The image data is stored in a channel-major order so
+/// that is more easily translates to SIMD/SIMT architectures (consider something like CUDA).
 ///
 pub struct RgbImg {
     r: minivec::MiniVec<u8>,
@@ -136,6 +137,9 @@ impl RgbImg {
         self.height() * self.width()
     }
 
+    /// `iter` returns an `RgbIter` over the current image data. The iterator returns a tuple
+    /// `(u8, u8, u8)` in `(R, G, B)` ordering.
+    ///
     pub fn iter(&self) -> RgbIter {
         RgbIter {
             r_: self.r().iter(),
