@@ -160,4 +160,8 @@ impl<'a> std::iter::Iterator for RgbIter<'a> {
             _ => None,
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.r_.size_hint()
+    }
 }
