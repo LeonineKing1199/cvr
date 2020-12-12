@@ -2,4 +2,4 @@
 /.vscode
 
 Cargo.lock
-tests/images/parrot-copy.png
+tests/images/parrot-*
