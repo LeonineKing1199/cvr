@@ -1,225 +1,197 @@
 #![warn(clippy::pedantic)]
 
-extern crate minivec;
-
-pub mod png;
-
-/// `RgbImg` represents an 8-bit RGB image. The image data is stored in a channel-major order so
-/// that is more easily translates to SIMD/SIMT architectures (consider something like CUDA).
+/// `srgb_to_linear` converts an sRGB gamma-corrected 8-bit pixel value into its corresponding value
+/// in the linear sRGB color space as a `f32` mapped to the range `[0, 1]`.
 ///
-pub struct RgbImg {
-    r: minivec::MiniVec<u8>,
-    g: minivec::MiniVec<u8>,
-    b: minivec::MiniVec<u8>,
-    height: usize,
-    width: usize,
-}
+/// This function is the inverse of `linear_to_srgb`.
+///
+/// Notes on the algorithm and the constants used can be found [here](https://en.wikipedia.org/wiki/SRGB).
+///
+pub fn srgb_to_linear(u: u8) -> f32 {
+    // 1/ 255.0 => 0.00392156863
+    //
+    let u = u as f32 * 0.00392156863;
 
-impl RgbImg {
-    /// `new` returns an empty `RgbImg` that has allocated no memory and has a height and width of
-    /// `0`.
-    ///
-    pub fn new() -> RgbImg {
-        RgbImg {
-            r: minivec::MiniVec::new(),
-            g: minivec::MiniVec::new(),
-            b: minivec::MiniVec::new(),
-            height: 0,
-            width: 0,
-        }
-    }
-
-    /// `from_packed_buf` will construct an `RgbImg` from a user-supplied buffer, using the provided
-    /// `height` and `width` for image dimensions.
-    ///
-    /// Internally `RgbImg` stores its image data across 3 allocations in a channel-major ordering.
-    /// But many libraries operate natively in terms of row-major densely packed image data so this
-    /// function is meant to help inter-operate with them.
-    ///
-    /// Note: this function _copies_ the supplied buf so its time and space complexity are both
-    /// `O(buf.len())`.
-    ///
-    pub fn from_packed_buf(buf: &[u8], height: usize, width: usize) -> RgbImg {
-        let total = height * width;
-
-        let mut r = minivec::MiniVec::<u8>::with_capacity(total);
-        let mut g = minivec::MiniVec::<u8>::with_capacity(total);
-        let mut b = minivec::MiniVec::<u8>::with_capacity(total);
-
-        let (r_buf, g_buf, b_buf) = (
-            r.spare_capacity_mut(),
-            g.spare_capacity_mut(),
-            b.spare_capacity_mut(),
-        );
-
-        buf.chunks_exact(3)
-            .enumerate()
-            .for_each(|(idx, pixel)| -> () {
-                unsafe {
-                    r_buf[idx].as_mut_ptr().write(pixel[0]);
-                    g_buf[idx].as_mut_ptr().write(pixel[1]);
-                    b_buf[idx].as_mut_ptr().write(pixel[2]);
-                }
-            });
-
-        unsafe {
-            r.set_len(total);
-            g.set_len(total);
-            b.set_len(total);
-        }
-
-        Self {
-            r,
-            g,
-            b,
-            height,
-            width,
-        }
-    }
-
-    /// `to_packed_buf` writes the contained RGB data into a single contiguous buffer and then
-    /// returns it to the caller.
-    ///
-    /// Internally, `RgbImg` stores all of its data in a channel-major order using 3 separate
-    /// allocations. While this is an ideal layout for most operations, sometimes a densely-packed
-    /// row-major ordering of image data is required.
-    ///
-    pub fn to_packed_buf(&self) -> Vec<u8> {
-        let (r, g, b) = (self.r(), self.g(), self.b());
-        let len = self.total() as usize * 3;
-        let mut vec = vec![std::mem::MaybeUninit::<u8>::uninit(); len];
-
-        for idx in 0..self.total() as usize {
-            let base_offset = idx as usize * 3;
-
-            vec[base_offset + 0] = std::mem::MaybeUninit::new(r[idx]);
-            vec[base_offset + 1] = std::mem::MaybeUninit::new(g[idx]);
-            vec[base_offset + 2] = std::mem::MaybeUninit::new(b[idx]);
-        }
-
-        let mut vec = core::mem::ManuallyDrop::new(vec);
-        unsafe { Vec::from_raw_parts(vec.as_mut_ptr() as *mut u8, vec.len(), vec.capacity()) }
-    }
-
-    /// `r` will return a read-only slice pointing to the image data's red channel.
-    ///
-    pub fn r(&self) -> &[u8] {
-        &self.r
-    }
-
-    /// `g` will return a read-only slice pointing to the image data's green channel.
-    ///
-    pub fn g(&self) -> &[u8] {
-        &self.g
-    }
-
-    /// `b` will return a read-only slice pointing to the image data's blue channel.
-    pub fn b(&self) -> &[u8] {
-        &self.b
-    }
-
-    /// `height` returns the number of rows contained in the image data.
-    ///
-    pub fn height(&self) -> usize {
-        self.height
-    }
-
-    /// `width` returns the number of columns contained in the image data.
-    ///
-    pub fn width(&self) -> usize {
-        self.width
-    }
-
-    /// `total` is named after its OpenCV counterpart and returns the number of pixels contained
-    /// in the image data.
-    ///
-    pub fn total(&self) -> usize {
-        self.height() * self.width()
-    }
-
-    /// `iter` returns an `RgbIter` over the current image data. The iterator returns a tuple
-    /// `(u8, u8, u8)` in `(R, G, B)` ordering.
-    ///
-    pub fn iter(&self) -> RgbIter {
-        RgbIter {
-            r_: self.r().iter(),
-            g_: self.g().iter(),
-            b_: self.b().iter(),
-        }
+    if u <= 0.04045 {
+        // 1 / 12.92 => 0.0773993808
+        //
+        u * 0.0773993808
+    } else {
+        // 1/ 1.055 => 0.947867299
+        //
+        ((u + 0.055) * 0.947867299).powf(2.4)
     }
 }
 
-pub struct RgbIter<'a> {
-    r_: std::slice::Iter<'a, u8>,
-    g_: std::slice::Iter<'a, u8>,
-    b_: std::slice::Iter<'a, u8>,
-}
+/// `linear_to_srgb` takes a `f32` linear sRGB pixel value in the range `[0, 1]` and encodes it as
+/// an 8-bit value in the gamma-corrected sRGB space.
+///
+/// Note: if the gamma-corrected value exceeds `1.0` then it is automatically clipped and `255` is
+/// returned.
+///
+/// This function is the inverse of `srgb_to_linear`.
+///
+/// Notes on the algorithm and the constants used can be found [here](https://en.wikipedia.org/wiki/SRGB).
+///
+pub fn linear_to_srgb(u: f32) -> u8 {
+    let u = if u <= 0.0031308 {
+        12.92 * u
+    } else {
+        // 1 / 2.4 => 0.416666667
+        //
+        1.055 * u.powf(0.416666667) - 0.055
+    };
 
-impl<'a> std::iter::Iterator for RgbIter<'a> {
-    type Item = (u8, u8, u8);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match (self.r_.next(), self.g_.next(), self.b_.next()) {
-            (Some(r), Some(g), Some(b)) => Some((*r, *g, *b)),
-            _ => None,
-        }
+    if u >= 1.0 {
+        return 255;
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.r_.size_hint()
+    (255.0 * u).round() as u8
+}
+
+/// `Numeric` represents such types as `u8` and `f32`.
+///
+pub trait Numeric: Copy {}
+
+impl Numeric for u8 {}
+impl Numeric for f32 {}
+
+pub mod rgb {
+    /// `Iter` enables the simultaneous traversal of 3 separate channels of image data. It works
+    /// with any type that can be converted to a `&[Numeric]`. Image data is returned pixel-by-pixel
+    /// in a `[N; 3]` format with `(R, G, B)` ordering.
+    ///
+    pub struct Iter<'a, N>
+    where
+        N: crate::Numeric,
+    {
+        r: std::slice::Iter<'a, N>,
+        g: std::slice::Iter<'a, N>,
+        b: std::slice::Iter<'a, N>,
     }
-}
 
-pub struct GreyscaleIter<Iter>
-where
-    Iter: std::iter::Iterator<Item = (u8, u8, u8)>,
-{
-    iter_: Iter,
-}
-
-impl<Iter> GreyscaleIter<Iter>
-where
-    Iter: std::iter::Iterator<Item = (u8, u8, u8)>,
-{
-    fn new(iter: Iter) -> Self {
-        Self { iter_: iter }
-    }
-}
-
-impl<Iter> std::iter::Iterator for GreyscaleIter<Iter>
-where
-    Iter: std::iter::Iterator<Item = (u8, u8, u8)>,
-{
-    type Item = u8;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter_.next().map(|(r, g, b)| -> u8 {
-            let r = (r as f64) / 255.0;
-            let g = (g as f64) / 255.0;
-            let b = (b as f64) / 255.0;
-
-            let grey = 0.21263901 * r + 0.71516868 * g + 0.07219232 * b;
-
-            if grey >= 1.0 {
-                255
-            } else {
-                (255.0 * grey) as u8
+    /// `new` constructs a new `Iter` using the backing `&[N]` of the types passed in by the user.
+    ///
+    /// # Example
+    /// ```
+    /// let r = vec![1, 2, 3];
+    /// let g = vec![4, 5, 6];
+    /// let b = vec![7, 8, 9];
+    ///
+    /// let rgb_iter = cvr::rgb::Iter::new(&r, &g, &b);
+    /// ```
+    ///
+    impl<'a, N> Iter<'a, N>
+    where
+        N: crate::Numeric,
+    {
+        pub fn new<R>(r: &'a R, g: &'a R, b: &'a R) -> Self
+        where
+            R: std::convert::AsRef<[N]>,
+        {
+            Self {
+                r: r.as_ref().iter(),
+                g: g.as_ref().iter(),
+                b: b.as_ref().iter(),
             }
-        })
+        }
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter_.size_hint()
+    impl<'a, N> std::iter::Iterator for Iter<'a, N>
+    where
+        N: crate::Numeric,
+    {
+        type Item = [N; 3];
+
+        fn next(&mut self) -> Option<Self::Item> {
+            match (self.r.next(), self.g.next(), self.b.next()) {
+                (Some(r), Some(g), Some(b)) => Some([*r, *g, *b]),
+                _ => None,
+            }
+        }
+    }
+
+    pub mod iter {
+        /// `SRGBToLinearIter` lazily converts 8-bit sRGB pixels to their linear floating point
+        /// counterparts.
+        ///
+        pub struct SRGBToLinearIter<Iter>
+        where
+            Iter: std::iter::Iterator<Item = [u8; 3]>,
+        {
+            iter: Iter,
+        }
+
+        impl<Iter> std::iter::Iterator for SRGBToLinearIter<Iter>
+        where
+            Iter: std::iter::Iterator<Item = [u8; 3]>,
+        {
+            type Item = [f32; 3];
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.iter.next().map(|[r, g, b]| {
+                    [
+                        crate::srgb_to_linear(r),
+                        crate::srgb_to_linear(g),
+                        crate::srgb_to_linear(b),
+                    ]
+                })
+            }
+        }
+
+        /// `SRGBToLinear` is the public trait `std::iter::Iterator` types implement to enable
+        /// `.srgb_to_linear()` as an iterator adapter.
+        ///
+        pub trait SRGBToLinear: std::iter::Iterator<Item = [u8; 3]>
+        where
+            Self: Sized,
+        {
+            fn srgb_to_linear(self) -> SRGBToLinearIter<Self> {
+                SRGBToLinearIter { iter: self }
+            }
+        }
+
+        impl<Iter> SRGBToLinear for Iter where Iter: std::iter::Iterator<Item = [u8; 3]> {}
+
+        /// `LinearToSRGBIter` lazily converts linear floating point `(R, G, B)` data into its
+        /// 8-bit sRGB representation.
+        ///
+        pub struct LinearToSRGBIter<Iter>
+        where
+            Iter: std::iter::Iterator<Item = [f32; 3]>,
+        {
+            iter: Iter,
+        }
+
+        impl<Iter> std::iter::Iterator for LinearToSRGBIter<Iter>
+        where
+            Iter: std::iter::Iterator<Item = [f32; 3]>,
+        {
+            type Item = [u8; 3];
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.iter.next().map(|[r, g, b]| {
+                    [
+                        crate::linear_to_srgb(r),
+                        crate::linear_to_srgb(g),
+                        crate::linear_to_srgb(b),
+                    ]
+                })
+            }
+        }
+
+        /// `LinearToSRGB` is the public trait `std::iter::Iterator` types implement to enable
+        /// `.linear_to_srgb()` as an iterator adapter.
+        ///
+        pub trait LinearToSRGB: std::iter::Iterator<Item = [f32; 3]>
+        where
+            Self: Sized,
+        {
+            fn linear_to_srgb(self) -> LinearToSRGBIter<Self> {
+                LinearToSRGBIter { iter: self }
+            }
+        }
+
+        impl<Iter> LinearToSRGB for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
     }
 }
-
-pub trait Greyscale: std::iter::Iterator<Item = (u8, u8, u8)>
-where
-    Self: Sized,
-{
-    fn greyscale(self) -> GreyscaleIter<Self> {
-        GreyscaleIter::new(self)
-    }
-}
-
-impl<Iter> Greyscale for Iter where Iter: std::iter::Iterator<Item = (u8, u8, u8)> {}
