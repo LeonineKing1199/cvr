@@ -1,6 +1,6 @@
 extern crate cvr;
 
-use cvr::rgb::iter::{LinearToSRGB, SRGBToLinear};
+use cvr::rgb::iter::{LinearSRGB, SRGBLinear};
 
 #[test]
 fn linear_to_srgb() {
