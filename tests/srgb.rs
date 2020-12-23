@@ -1,9 +1,9 @@
 extern crate cvr;
 
-use cvr::rgb::iter::{LinearSRGB, SRGBLinear};
+use cvr::rgb::iter::{LinearGray, LinearSRGB, SRGBLinear};
 
 #[test]
-fn linear_to_srgb() {
+fn srgb_to_linear_to_srgb() {
     let r = [1u8, 2, 3];
     let g = [4u8, 5, 6];
     let b = [7u8, 8, 9];
@@ -41,4 +41,18 @@ fn linear_to_srgb() {
     assert_eq!(red_srgb, r);
     assert_eq!(green_srgb, g);
     assert_eq!(blue_srgb, b);
+}
+
+#[test]
+fn srgb_to_gray() {
+    let r = [1u8, 2, 3];
+    let g = [4u8, 5, 6];
+    let b = [7u8, 8, 9];
+
+    let gray: Vec<f32> = cvr::rgb::Iter::new(&r, &g, &b)
+        .srgb_to_linear()
+        .linear_to_gray()
+        .collect();
+
+    assert_eq!(gray, [0.00108622, 0.001389747, 0.0016932739]);
 }

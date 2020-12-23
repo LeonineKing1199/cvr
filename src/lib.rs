@@ -176,6 +176,12 @@ pub mod rgb {
         (255.0 * u).round() as u8
     }
 
+    #[must_use]
+    #[allow(clippy::mistyped_literal_suffixes)]
+    pub fn linear_to_gray(rgb: [f32; 3]) -> f32 {
+        0.212_639 * rgb[0] + 0.715_168_7 * rgb[1] + 0.072_192_32 * rgb[2]
+    }
+
     /// `Iter` enables the simultaneous traversal of 3 separate channels of image data. It works
     /// with any type that can be converted to a `&[Numeric]`. Image data is returned pixel-by-pixel
     /// in a `[N; 3]` format with `(R, G, B)` ordering.
@@ -239,7 +245,7 @@ pub mod rgb {
         where
             Iter: std::iter::Iterator<Item = [u8; 3]>,
         {
-            iter: std::iter::Map<Iter, fn(<Iter as std::iter::Iterator>::Item) -> [f32; 3]>,
+            iter: std::iter::Map<Iter, fn([u8; 3]) -> [f32; 3]>,
         }
 
         impl<Iter> std::iter::Iterator for SRGBToLinear<Iter>
@@ -280,7 +286,7 @@ pub mod rgb {
         where
             Iter: std::iter::Iterator<Item = [f32; 3]>,
         {
-            iter: std::iter::Map<Iter, fn(<Iter as std::iter::Iterator>::Item) -> [u8; 3]>,
+            iter: std::iter::Map<Iter, fn([f32; 3]) -> [u8; 3]>,
         }
 
         impl<Iter> std::iter::Iterator for LinearToSRGB<Iter>
@@ -313,5 +319,38 @@ pub mod rgb {
         }
 
         impl<Iter> LinearSRGB for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
+
+        pub struct LinearToGray<Iter>
+        where
+            Iter: std::iter::Iterator<Item = [f32; 3]>,
+        {
+            iter: std::iter::Map<Iter, fn([f32; 3]) -> f32>,
+        }
+
+        impl<Iter> std::iter::Iterator for LinearToGray<Iter>
+        where
+            Iter: std::iter::Iterator<Item = [f32; 3]>,
+        {
+            type Item = f32;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.iter.next()
+            }
+        }
+
+        pub trait LinearGray: std::iter::Iterator<Item = [f32; 3]>
+        where
+            Self: Sized,
+        {
+            fn linear_to_gray(self) -> LinearToGray<Self> {
+                use crate::rgb::linear_to_gray;
+
+                LinearToGray {
+                    iter: self.map(linear_to_gray),
+                }
+            }
+        }
+
+        impl<Iter> LinearGray for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
     }
 }
