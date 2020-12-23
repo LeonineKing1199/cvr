@@ -234,11 +234,12 @@ pub mod rgb {
         /// `SRGBToLinear` lazily converts 8-bit `sRGB` pixels to their linear floating point
         /// counterparts.
         ///
+        #[allow(clippy::type_complexity)]
         pub struct SRGBToLinear<Iter>
         where
             Iter: std::iter::Iterator<Item = [u8; 3]>,
         {
-            iter: Iter,
+            iter: std::iter::Map<Iter, fn(<Iter as std::iter::Iterator>::Item) -> [f32; 3]>,
         }
 
         impl<Iter> std::iter::Iterator for SRGBToLinear<Iter>
@@ -248,11 +249,7 @@ pub mod rgb {
             type Item = [f32; 3];
 
             fn next(&mut self) -> Option<Self::Item> {
-                use crate::rgb::srgb_to_linear;
-
-                self.iter
-                    .next()
-                    .map(|[r, g, b]| [srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b)])
+                self.iter.next()
             }
         }
 
@@ -264,7 +261,12 @@ pub mod rgb {
             Self: Sized,
         {
             fn srgb_to_linear(self) -> SRGBToLinear<Self> {
-                SRGBToLinear { iter: self }
+                use crate::rgb::srgb_to_linear;
+
+                SRGBToLinear {
+                    iter: self
+                        .map(|[r, g, b]| [srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b)]),
+                }
             }
         }
 
@@ -273,11 +275,12 @@ pub mod rgb {
         /// `LinearToSRGBIter` lazily converts linear floating point `(R, G, B)` data into its
         /// 8-bit `sRGB` representation.
         ///
+        #[allow(clippy::type_complexity)]
         pub struct LinearToSRGB<Iter>
         where
             Iter: std::iter::Iterator<Item = [f32; 3]>,
         {
-            iter: Iter,
+            iter: std::iter::Map<Iter, fn(<Iter as std::iter::Iterator>::Item) -> [u8; 3]>,
         }
 
         impl<Iter> std::iter::Iterator for LinearToSRGB<Iter>
@@ -287,23 +290,25 @@ pub mod rgb {
             type Item = [u8; 3];
 
             fn next(&mut self) -> Option<Self::Item> {
-                use crate::rgb::linear_to_srgb;
-
-                self.iter
-                    .next()
-                    .map(|[r, g, b]| [linear_to_srgb(r), linear_to_srgb(g), linear_to_srgb(b)])
+                self.iter.next()
             }
         }
 
         /// `LinearToSRGB` is the public trait `std::iter::Iterator` types implement to enable
         /// `.linear_to_srgb()` as an iterator adapter.
         ///
+        #[allow(clippy::type_complexity)]
         pub trait LinearSRGB: std::iter::Iterator<Item = [f32; 3]>
         where
             Self: Sized,
         {
             fn linear_to_srgb(self) -> LinearToSRGB<Self> {
-                LinearToSRGB { iter: self }
+                use crate::rgb::linear_to_srgb;
+
+                LinearToSRGB {
+                    iter: self
+                        .map(|[r, g, b]| [linear_to_srgb(r), linear_to_srgb(g), linear_to_srgb(b)]),
+                }
             }
         }
 
