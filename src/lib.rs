@@ -15,8 +15,8 @@ pub mod rgb {
     //! `rgb` houses functions for working primarily in the 8-bit `sRGB` color space but also
     //! supports various other operations like color space conversions.
     //!
-    //! It's worth noting that for those who are unfamiliar with this color space, it's one of the
-    //! most widely used and popular color spaces in use today.
+    //! It's worth noting for those who are unfamiliar with the `sRGB` color space, it's one of the
+    //! most widely used and popular color spaces.
     //!
     //! If, for example, a user reads in a `.png` image file, it should be assumed that its color
     //! values are encoded as `sRGB` and as such, the image doesn't natively support linear math.
@@ -35,6 +35,9 @@ pub mod rgb {
     //! ```
     //! use cvr::rgb::iter::SRGBLinear;
     //!
+    //! // `cvr` emphasizes supporting channel-major ordering of image data
+    //! // this is done for better interop with GPU-based code
+    //! //
     //! let r = [1u8, 2, 3];
     //! let g = [4u8, 5, 6];
     //! let b = [7u8, 8, 9];
@@ -46,8 +49,8 @@ pub mod rgb {
     //!         // can now use the (r, g, b) values for pixel `idx`
     //!     });
     //!
-    //! // ... or ...
-    //!
+    //! // but `cvr` also aims to help support packed pixel formats wherever it can!
+    //! //
     //! let pixels = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
     //! pixels
     //!     .iter()
@@ -64,14 +67,14 @@ pub mod rgb {
     //! While most users would expect to be operating off the 8-bit values directly, working in
     //! floating point has several attractive features. Namely, it enables your image processing
     //! to retain accuracy and it keeps values consistent across different bit depths. For example,
-    //! while 0.5 always represents something has as bright as 1.0, 128 will not always be the
+    //! while 0.5 always represents something half as bright as 1.0, 128 will not always be the
     //! midpoint depending on the bit-depth of the image (8-bit vs 16-bit). Other operations like
-    //! white balancing
+    //! white balancing are also simplified.
     //!
-    //! It's worth noting that not all 8-bit RGB values are `sRGB`. For example, certain cameras
+    //! It's worth noting that not _all_ 8-bit RGB values are `sRGB`. For example, certain cameras
     //! enable you to capture images as raw sensor values which can be interpreted linearly without
     //! loss of accuracy. Most cameras (including machine vision ones) do support `sRGB` though and
-    //! in some cases, it is the default setting to have `sRGB` conversion enabled.
+    //! in some cases, it is the default setting to have `sRGB` encoding enabled.
     //!
 
     /// `srgb_to_linear` converts an `sRGB` gamma-corrected 8-bit pixel value into its corresponding
