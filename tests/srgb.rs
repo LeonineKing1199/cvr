@@ -2,7 +2,7 @@
 
 extern crate cvr;
 
-use cvr::rgb::iter::{LinearGray, LinearSRGB, SRGBLinear};
+use cvr::rgb::iter::{LinearGrayIterator, LinearSRGBIterator, SRGBLinearIterator};
 
 #[test]
 fn srgb_to_linear_to_srgb() {

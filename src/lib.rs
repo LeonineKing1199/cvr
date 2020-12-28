@@ -33,7 +33,7 @@ pub mod rgb {
     //! # How to Convert `sRGB` to Linear
     //!
     //! ```
-    //! use cvr::rgb::iter::SRGBLinear;
+    //! use cvr::rgb::iter::SRGBLinearIterator;
     //!
     //! // `cvr` emphasizes supporting channel-major ordering of image data
     //! // this is done for better interop with GPU-based code
@@ -262,7 +262,7 @@ pub mod rgb {
         /// `SRGBLinear` is the public trait `std::iter::Iterator` types implement to enable
         /// `.srgb_to_linear()` as an iterator adapter.
         ///
-        pub trait SRGBLinear: std::iter::Iterator<Item = [u8; 3]>
+        pub trait SRGBLinearIterator: std::iter::Iterator<Item = [u8; 3]>
         where
             Self: Sized,
         {
@@ -276,7 +276,7 @@ pub mod rgb {
             }
         }
 
-        impl<Iter> SRGBLinear for Iter where Iter: std::iter::Iterator<Item = [u8; 3]> {}
+        impl<Iter> SRGBLinearIterator for Iter where Iter: std::iter::Iterator<Item = [u8; 3]> {}
 
         /// `LinearToSRGBIter` lazily converts linear floating point `(R, G, B)` data into its
         /// 8-bit `sRGB` representation.
@@ -304,7 +304,7 @@ pub mod rgb {
         /// `.linear_to_srgb()` as an iterator adapter.
         ///
         #[allow(clippy::type_complexity)]
-        pub trait LinearSRGB: std::iter::Iterator<Item = [f32; 3]>
+        pub trait LinearSRGBIterator: std::iter::Iterator<Item = [f32; 3]>
         where
             Self: Sized,
         {
@@ -318,7 +318,7 @@ pub mod rgb {
             }
         }
 
-        impl<Iter> LinearSRGB for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
+        impl<Iter> LinearSRGBIterator for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
 
         pub struct LinearToGray<Iter>
         where
@@ -338,7 +338,7 @@ pub mod rgb {
             }
         }
 
-        pub trait LinearGray: std::iter::Iterator<Item = [f32; 3]>
+        pub trait LinearGrayIterator: std::iter::Iterator<Item = [f32; 3]>
         where
             Self: Sized,
         {
@@ -351,6 +351,6 @@ pub mod rgb {
             }
         }
 
-        impl<Iter> LinearGray for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
+        impl<Iter> LinearGrayIterator for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
     }
 }
