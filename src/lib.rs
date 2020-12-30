@@ -4,6 +4,8 @@
 
 #![warn(clippy::pedantic)]
 
+pub mod png;
+
 /// `Numeric` represents such types as `u8` and `f32`.
 ///
 pub trait Numeric: Copy {}
@@ -352,5 +354,17 @@ pub mod rgb {
         }
 
         impl<Iter> LinearGrayIterator for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
+    } // iter
+
+    pub struct RGBA<N>
+    where
+        N: crate::Numeric,
+    {
+        pub(super) r: Vec<N>,
+        pub(super) g: Vec<N>,
+        pub(super) b: Vec<N>,
+        pub(super) a: Vec<N>,
+        pub(super) h: usize,
+        pub(super) w: usize,
     }
 }
